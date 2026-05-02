@@ -1,0 +1,15 @@
+# Config with credentials — never commit this
+options.json
+ 
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+ 
+# IDE
+.vscode/
+.idea/
+ 

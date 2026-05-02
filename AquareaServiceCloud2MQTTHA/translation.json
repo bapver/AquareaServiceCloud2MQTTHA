@@ -1,0 +1,498 @@
+{
+  "function-status-text-005": {
+    "name": "Operation"
+  },
+  "function-status-text-007": {
+    "name": "Mode"
+  },
+  "function-status-text-009": {
+    "name": "InletWaterTemperature",
+    "unit": "°C"
+  },
+  "function-status-text-011": {
+    "name": "OutletWater",
+    "unit": "°C"
+  },
+  "function-status-text-013": {
+    "name": "Zone1TemperatureActual",
+    "unit": "°C"
+  },
+  "function-status-text-015": {
+    "name": "Zone1TemperatureSet",
+    "unit": "°C"
+  },
+  "function-status-text-017": {
+    "name": "Zone1WaterTemperature",
+    "unit": "°C"
+  },
+  "function-status-text-019": {
+    "name": "Zone2TemperatureActual",
+    "unit": "°C"
+  },
+  "function-status-text-021": {
+    "name": "Zone2TemperatureSet",
+    "unit": "°C"
+  },
+  "function-status-text-023": {
+    "name": "Zone2WaterTemperature",
+    "unit": "°C"
+  },
+  "function-status-text-025": {
+    "name": "DHWTankTemperatureActual",
+    "unit": "°C"
+  },
+  "function-status-text-027": {
+    "name": "DHWTankTemperatureSet",
+    "unit": "°C"
+  },
+  "function-status-text-029": {
+    "name": "BufferTankTemperature",
+    "unit": "°C"
+  },
+  "function-status-text-031": {
+    "name": "OutdoorTemperature",
+    "unit": "°C"
+  },
+  "function-status-text-035": {
+    "name": "WaterFlow",
+    "unit": "L/min"
+  },
+  "function-status-text-037": {
+    "name": "PumpSpeed",
+    "unit": "r/min"
+  },
+  "function-status-text-039": {
+    "name": "ThreeWayValve"
+  },
+  "function-status-text-041": {
+    "name": "RoomHeaterStatus"
+  },
+  "function-status-text-043": {
+    "name": "TankHeaterStatus"
+  },
+  "function-status-text-045": {
+    "name": "DefrostStatus"
+  },
+  "function-status-text-047": {
+    "name": "SolarStatus"
+  },
+  "function-status-text-049": {
+    "name": "SolarTemperature"
+  },
+  "function-status-text-051": {
+    "name": "BivalentMode"
+  },
+  "function-status-text-053": {
+    "name": "ErrorStatus"
+  },
+  "function-status-text-056": {
+    "name": "CompressorFrequency",
+    "unit": "Hz"
+  },
+  "function-status-text-058": {
+    "name": "CompressorOperatingTime",
+    "unit": "h"
+  },
+  "function-status-text-060": {
+    "name": "CompressorNumberOfOperations",
+    "unit": ""
+  },
+  "function-status-text-063": {
+    "name": "RoomHeaterCapacity",
+    "unit": "kW"
+  },
+  "function-status-text-065": {
+    "name": "RoomHeaterOperatingTime",
+    "unit": "h"
+  },
+  "function-status-text-068": {
+    "name": "TankHeaterOperatingTime",
+    "unit": "h"
+  },
+  "function-status-text-123": {
+    "name": "CirculationDHW"
+  },
+  "function-status-text-124": {
+    "name": "WaterPressure",
+    "unit": "bar"
+  },
+  "function-status-text-126": {
+    "name": "Zone2PumpSpeed",
+    "unit": "r/min"
+  },
+  "function-setting-user-select-003": {
+    "name": "Operation",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-00D7",
+      "0x02": "2010-00DC"
+    },
+    "label_code": "2010-0078"
+  },
+  "function-setting-user-select-005": {
+    "name": "OperationMode",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-00E1",
+      "0x02": "2010-00E6",
+      "0x03": "2010-00EB",
+      "0x08": "2010-00F0",
+      "0x0B": "2010-00F5",
+      "0x0C": "2010-00FA",
+      "0x0D": "2010-00FF"
+    },
+    "label_code": "2010-007D"
+  },
+  "function-setting-user-select-008": {
+    "name": "Zone1TargetTemperatureHeat",
+    "kind": "placeholder",
+    "unit": "°C",
+    "display_name": "Zone 1 target temperature heat"
+  },
+  "function-setting-user-select-009": {
+    "name": "Zone2TargetTemperatureHeat",
+    "kind": "placeholder",
+    "unit": "°C",
+    "display_name": "Zone 2 target temperature heat"
+  },
+  "function-setting-user-select-010": {
+    "name": "Zone1TargetTemperatureCool",
+    "kind": "placeholder",
+    "unit": "°C",
+    "display_name": "Zone 1 target temperature cool"
+  },
+  "function-setting-user-select-011": {
+    "name": "Zone2TargetTemperatureCool",
+    "kind": "placeholder",
+    "unit": "°C",
+    "display_name": "Zone 2 target temperature cool"
+  },
+  "function-setting-user-select-013": {
+    "name": "TankTargetTemperature",
+    "kind": "placeholder",
+    "unit": "°C",
+    "display_name": "Tank target temperature"
+  },
+  "function-setting-user-select-015": {
+    "name": "ZoneOperationSetting",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0122",
+      "0x02": "2010-0127",
+      "0x03": "2010-012C"
+    },
+    "label_code": "2010-008C"
+  },
+  "function-setting-user-select-018": {
+    "name": "ForceDHW",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0136",
+      "0x02": "2010-013B"
+    },
+    "label_code": "2010-0091"
+  },
+  "function-setting-user-select-020": {
+    "name": "WeeklyTimer",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0140",
+      "0x02": "2010-0145"
+    },
+    "label_code": "2010-0096"
+  },
+  "function-setting-user-select-022": {
+    "name": "HolidayMode",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-014A",
+      "0x02": "2010-014F"
+    },
+    "label_code": "2010-009B"
+  },
+  "function-setting-user-select-023": {
+    "name": "HolidayModeHeatShiftTemp",
+    "kind": "placeholder",
+    "display_name": "Holiday mode heat shift temp"
+  },
+  "function-setting-user-select-024": {
+    "name": "HolidayModeTankShiftTemp",
+    "kind": "placeholder",
+    "display_name": "Holiday mode tank shift temp"
+  },
+  "function-setting-user-select-026": {
+    "name": "QuietTimer",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0168",
+      "0x02": "2010-016D"
+    },
+    "label_code": "2010-00A0"
+  },
+  "function-setting-user-select-028": {
+    "name": "QuietMode",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0172",
+      "0x02": "2010-0177",
+      "0x03": "2010-017C",
+      "0x04": "2010-0181"
+    },
+    "label_code": "2010-00A5"
+  },
+  "function-setting-user-select-029": {
+    "name": "Priority",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0182",
+      "0x02": "2010-0183"
+    }
+  },
+  "function-setting-user-select-030": {
+    "name": "RoomHeater",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0186",
+      "0x02": "2010-018B"
+    },
+    "label_code": "2010-00AA"
+  },
+  "function-setting-user-select-032": {
+    "name": "TankHeater",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0190",
+      "0x02": "2010-0195"
+    },
+    "label_code": "2010-00AF"
+  },
+  "function-setting-user-select-034": {
+    "name": "Sterilization",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-019A"
+    },
+    "label_code": "2010-00B4"
+  },
+  "function-setting-user-select-035": {
+    "name": "TankSensor",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-0197",
+      "0x02": "2010-0198"
+    },
+    "label_code": "2010-00B7"
+  },
+  "function-setting-user-select-036": {
+    "name": "Powerful",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-01A4",
+      "0x02": "2010-01A9",
+      "0x03": "2010-01AE",
+      "0x04": "2010-01B3"
+    },
+    "label_code": "2010-00B9"
+  },
+  "function-setting-user-select-038": {
+    "name": "ForceHeater",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-01B8",
+      "0x02": "2010-01BD"
+    },
+    "label_code": "2010-00BE"
+  },
+  "function-setting-user-select-040": {
+    "name": "ForceDefrost",
+    "kind": "basic",
+    "values": {
+      "0x01": "2010-01C2"
+    },
+    "label_code": "2010-00C3"
+  },
+  "auto-2zonemixingvalve1opening": {
+    "name": "2ZoneMixingValve1Opening",
+    "unit": "sec"
+  },
+  "auto-2zonemixingvalve2opening": {
+    "name": "2ZoneMixingValve2Opening",
+    "unit": "sec"
+  },
+  "auto-actualoutdoortemperature": {
+    "name": "ActualOutdoorTemperature",
+    "unit": "°C"
+  },
+  "auto-actualtanktemperature": {
+    "name": "ActualTankTemperature",
+    "unit": "°C"
+  },
+  "auto-buffertankwatertemperature": {
+    "name": "BufferTankWaterTemperature",
+    "unit": "°C"
+  },
+  "auto-bypassinlettemp": {
+    "name": "BypassInletTemp",
+    "unit": "°C"
+  },
+  "auto-bypassoutlettemperature": {
+    "name": "BypassOutletTemperature",
+    "unit": "°C"
+  },
+  "auto-co-efficientfrequencycontrol": {
+    "name": "Co-EfficientFrequencyControl",
+    "unit": "%"
+  },
+  "auto-currentlv": {
+    "name": "CurrentLv",
+    "unit": "Lv"
+  },
+  "auto-defrosttemperature": {
+    "name": "DefrostTemperature",
+    "unit": "°C"
+  },
+  "auto-dischargetemperature": {
+    "name": "DischargeTemperature",
+    "unit": "°C"
+  },
+  "auto-economizeroutlettemp": {
+    "name": "EconomizerOutletTemp",
+    "unit": "°C"
+  },
+  "auto-evaoutlettemperature": {
+    "name": "EvaOutletTemperature",
+    "unit": "°C"
+  },
+  "auto-fanmotorspeed1": {
+    "name": "FanMotorSpeed1",
+    "unit": "r/min"
+  },
+  "auto-fanmotorspeed2": {
+    "name": "FanMotorSpeed2",
+    "unit": "r/min"
+  },
+  "auto-heatmodeenergyconsumption": {
+    "name": "HeatModeEnergyConsumption",
+    "unit": "kW"
+  },
+  "auto-heatmodeenergygeneration": {
+    "name": "HeatModeEnergyGeneration",
+    "unit": "kW"
+  },
+  "auto-highpressure": {
+    "name": "HighPressure",
+    "unit": "kgf/cm2"
+  },
+  "auto-indoorpipingtemperature": {
+    "name": "IndoorPipingTemperature",
+    "unit": "°C"
+  },
+  "auto-ipmtemperature": {
+    "name": "IpmTemperature",
+    "unit": "°C"
+  },
+  "auto-lowpressure": {
+    "name": "LowPressure",
+    "unit": "kgf/cm2"
+  },
+  "auto-outdoorcurrent": {
+    "name": "OutdoorCurrent",
+    "unit": "A"
+  },
+  "auto-outdoorheatexchangermiddletemperature": {
+    "name": "OutdoorHeatExchangerMiddleTemperature",
+    "unit": "°C"
+  },
+  "auto-outdoorpipingtemperature": {
+    "name": "OutdoorPipingTemperature",
+    "unit": "°C"
+  },
+  "auto-outlet2temperature": {
+    "name": "Outlet2Temperature",
+    "unit": "°C"
+  },
+  "auto-outletwatertemperature": {
+    "name": "OutletWaterTemperature",
+    "unit": "°C"
+  },
+  "auto-outletwatertemperaturetarget": {
+    "name": "OutletWaterTemperatureTarget",
+    "unit": "°C"
+  },
+  "auto-poolwatertemperature": {
+    "name": "PoolWaterTemperature",
+    "unit": "°C"
+  },
+  "auto-pumpduty": {
+    "name": "PumpDuty",
+    "unit": "duty"
+  },
+  "auto-pumpflowrate": {
+    "name": "PumpFlowRate",
+    "unit": "L/min"
+  },
+  "auto-rc-1roomthermostatinternalsensortemperature": {
+    "name": "Rc-1RoomThermostatInternalSensorTemperature",
+    "unit": "°C"
+  },
+  "auto-rc-2roomthermostatinternalsensortemperature": {
+    "name": "Rc-2RoomThermostatInternalSensorTemperature",
+    "unit": "°C"
+  },
+  "auto-solarwatertemperature": {
+    "name": "SolarWaterTemperature",
+    "unit": "°C"
+  },
+  "auto-std": {
+    "name": "Std",
+    "unit": "kW"
+  },
+  "auto-tankmodeenergyconsumption": {
+    "name": "TankModeEnergyConsumption",
+    "unit": "kW"
+  },
+  "auto-tankmodeenergygeneration": {
+    "name": "TankModeEnergyGeneration",
+    "unit": "kW"
+  },
+  "auto-tankwatersettemperature": {
+    "name": "TankWaterSetTemperature",
+    "unit": "°C"
+  },
+  "auto-waterinlet2temp": {
+    "name": "WaterInlet2Temp",
+    "unit": "°C"
+  },
+  "auto-zone1actualtemperature": {
+    "name": "Zone1ActualTemperature",
+    "unit": "°C"
+  },
+  "auto-zone1settemperatureforcoolmode": {
+    "name": "Zone1SetTemperatureForCoolMode",
+    "unit": "°C"
+  },
+  "auto-zone1settemperatureforheatmode": {
+    "name": "Zone1SetTemperatureForHeatMode",
+    "unit": "°C"
+  },
+  "auto-zone1watertemperaturetarget": {
+    "name": "Zone1WaterTemperatureTarget",
+    "unit": "°C"
+  },
+  "auto-zone2actualtemperature": {
+    "name": "Zone2ActualTemperature",
+    "unit": "°C"
+  },
+  "auto-zone2settemperatureforcoolmode": {
+    "name": "Zone2SetTemperatureForCoolMode",
+    "unit": "°C"
+  },
+  "auto-zone2settemperatureforheatmode": {
+    "name": "Zone2SetTemperatureForHeatMode",
+    "unit": "°C"
+  },
+  "auto-zone2watertemperaturetarget": {
+    "name": "Zone2WaterTemperatureTarget",
+    "unit": "°C"
+  }
+}
