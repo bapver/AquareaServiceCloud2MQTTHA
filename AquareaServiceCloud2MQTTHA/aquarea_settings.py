@@ -100,18 +100,45 @@ class AquareaSettingsMixin:
         token = await self.get_end_user_shiesuahruefutohkun(user)
         bg = self.aquarea_settings.settings_background_data
 
-        await self.http_post_with_referer(
+        post_data = {
+            "var.deviceId": user.device_id,
+            "var.preOperation": bg.get("0x80", {}).get("value", ""),
+            "var.preMode": bg.get("0xE0", {}).get("value", ""),
+            "var.preTank": bg.get("0xE1", {}).get("value", ""),
+            f"var.{function_name_post}": value,
+            "shiesuahruefutohkun": token,
+        }
+
+        logger.info(
+            "Sending command to device %s: %s = %s (raw: var.%s = %s)",
+            cmd.device_id, cmd.setting, cmd.value, function_name_post, value,
+        )
+        logger.debug(
+            "POST installer/api/function/setting/user/set — full payload: %s",
+            json.dumps({k: v for k, v in post_data.items() if k != "shiesuahruefutohkun"}, ensure_ascii=False),
+        )
+
+        response = await self.http_post_with_referer(
             self.aquarea_service_cloud_url + "installer/api/function/setting/user/set",
             self.aquarea_service_cloud_url + "installer/functionSetting",
-            {
-                "var.deviceId": user.device_id,
-                "var.preOperation": bg.get("0x80", {}).get("value", ""),
-                "var.preMode": bg.get("0xE0", {}).get("value", ""),
-                "var.preTank": bg.get("0xE1", {}).get("value", ""),
-                f"var.{function_name_post}": value,
-                "shiesuahruefutohkun": token,
-            },
+            post_data,
         )
+
+        try:
+            response_json = json.loads(response)
+            error_code = response_json.get("errorCode", -1)
+            if error_code == 0:
+                logger.info(
+                    "Command accepted by Panasonic API: device %s, %s = %s",
+                    cmd.device_id, cmd.setting, cmd.value,
+                )
+            else:
+                logger.warning(
+                    "Command rejected by Panasonic API: device %s, %s = %s — errorCode=%s, response=%s",
+                    cmd.device_id, cmd.setting, cmd.value, error_code, response_json,
+                )
+        except Exception:
+            logger.debug("send_setting raw response: %s", response)
 
     async def get_device_settings(
         self, user: AquareaEndUserJSON, shiesuahruefutohkun: str
