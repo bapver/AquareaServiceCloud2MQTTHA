@@ -78,8 +78,20 @@ class AquareaSettingsMixin:
 
         if function_info:
             if function_info.kind == "basic":
-                value = self.reverse_dictionary_web_ui.get(value, value)
-                value = function_info.reverse_values.get(value, value)
+                # Build a direct label→hex map from this setting's own values,
+                # bypassing reverse_dictionary_web_ui which can have collisions
+                # when the same label string (e.g. "Cool", "On", "Off") appears
+                # under multiple 2010-xxxx codes.
+                label_to_hex = {
+                    self.dictionary_web_ui.get(code_2010, code_2010): hex_val
+                    for hex_val, code_2010 in function_info.values.items()
+                }
+                if value in label_to_hex:
+                    value = label_to_hex[value]
+                else:
+                    # Fallback to old two-step path
+                    value = self.reverse_dictionary_web_ui.get(value, value)
+                    value = function_info.reverse_values.get(value, value)
             elif function_info.kind == "placeholder":
                 try:
                     i = int(value, 0)
