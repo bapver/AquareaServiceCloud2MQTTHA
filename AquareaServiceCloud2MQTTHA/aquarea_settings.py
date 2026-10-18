@@ -6,6 +6,7 @@ import json
 import logging
 import re
 
+from aquarea_http import AquareaSessionError
 from aquarea_types import AquareaCommand, AquareaEndUserJSON, AquareaFunctionSettingGetJSON
 from aquarea_placeholder_ranges import compute_placeholder_ranges, load_from_js
 
@@ -168,7 +169,17 @@ class AquareaSettingsMixin:
             {"var.deviceId": user.device_id, "shiesuahruefutohkun": shiesuahruefutohkun},
         )
 
-        self.aquarea_settings = AquareaFunctionSettingGetJSON.from_dict(json.loads(b))
+        raw = json.loads(b)
+        parsed = AquareaFunctionSettingGetJSON.from_dict(raw)
+        # Validate BEFORE overwriting self.aquarea_settings: an empty response
+        # would otherwise wipe settings_background_data and make send_setting()
+        # silently drop every command.
+        if parsed.error_code != 0 or not parsed.setting_data_info:
+            raise AquareaSessionError(
+                f"function/setting/get returned errorCode={parsed.error_code}, "
+                f"{len(parsed.setting_data_info)} values: {str(raw)[:300]}"
+            )
+        self.aquarea_settings = parsed
         settings: dict[str, str] = {}
 
         # Compute correct min/max/step for placeholder settings from device config.

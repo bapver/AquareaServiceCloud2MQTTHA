@@ -51,6 +51,7 @@ Edit the add-on configuration in **Settings → Add-ons → AquareaServiceCloud2
 | `AquareaTimeout` | HTTP request timeout in seconds | `30` |
 | `PoolInterval` | Polling interval in seconds | `60` |
 | `LogSecOffset` | How many seconds back to fetch log data | `3600` |
+| `StaleDataTimeout` | Rebuild the Panasonic session (fresh cookies + re-login) if neither the status nor the log timestamp changed for this many seconds. `0` disables | `1800` |
 | `MqttServer` | MQTT broker hostname or IP | *(required)* |
 | `MqttPort` | MQTT broker port | `1883` |
 | `MqttLogin` | MQTT username (leave empty if none) | `` |
@@ -98,6 +99,15 @@ aquarea/{device_id}/settings/{Name}/set             → command topic (write her
 aquarea/status    → "online" / "offline"
 ```
 
+### Diagnostics (for notifications)
+```
+aquarea/{device_id}/diag/cloud               → ON / OFF  (Panasonic session healthy)
+aquarea/{device_id}/diag/session_resets      → automatic re-logins since add-on start
+aquarea/{device_id}/diag/last_reset          → ISO 8601 UTC timestamp
+aquarea/{device_id}/diag/last_reset_reason   → why the session was rebuilt
+```
+Exposed in HA as diagnostic entities: `Add-on` and `Panasonic Cloud` (connectivity binary sensors), `Session resets`, `Last session reset`, `Last session reset reason`.
+
 ---
 
 ## Entities created in Home Assistant
@@ -140,6 +150,9 @@ At startup the add-on:
 
 **Number entities still show 0–100 range after update**
 - HA caches entity properties — delete the old number entities from the MQTT integration and restart the add-on
+
+**Values freeze after several days, restart fixes it**
+- Panasonic can silently invalidate the web session while still answering HTTP 200. Since 1.0.3 the add-on checks `errorCode` on every response and rebuilds the session automatically; a stale-data watchdog (`StaleDataTimeout`) covers the case where data is returned but no longer updated. Look for `Rebuilding Panasonic session:` in the log.
 
 **Changing `Language` breaks entity names**
 - Delete the existing Aquarea device from **Settings → Devices & Services → MQTT**, then restart the add-on

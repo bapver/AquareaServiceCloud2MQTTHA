@@ -7,6 +7,12 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
+
+class AquareaSessionError(RuntimeError):
+    """Panasonic answered HTTP 200 but the payload says the session is no
+    longer usable (errorCode != 0 or empty data).  Requires a full re-login
+    with a fresh cookie jar."""
+
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"

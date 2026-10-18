@@ -50,6 +50,10 @@ class AquareaDeviceStatisticsMixin:
         raw = json.loads(b)
         log_data = AquareaLogDataJSON.from_dict(raw)
         if not log_data.log_data:
+            logger.warning(
+                "data/log returned no logData for device %s (errorCode=%s)",
+                user.gwid, log_data.error_code,
+            )
             return None
 
         device_log: dict[str, list[str]] = json.loads(log_data.log_data)
@@ -74,6 +78,8 @@ class AquareaDeviceStatisticsMixin:
 
             stats[f"aquarea/{user.gwid}/log/{name}"] = str_val
 
+        # Freshness marker consumed by the stale-data watchdog (aquarea.py)
+        self.last_log_key[user.gwid] = last_key
         ts_sec = int(last_key) / 1000
         ts_iso = datetime.fromtimestamp(ts_sec, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
         stats[f"aquarea/{user.gwid}/log/Timestamp"] = ts_iso

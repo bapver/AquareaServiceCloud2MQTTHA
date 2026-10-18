@@ -5,6 +5,7 @@ Device status — equivalent of aquareaDeviceStatus.go
 import json
 import logging
 
+from aquarea_http import AquareaSessionError
 from aquarea_types import AquareaEndUserJSON, AquareaStatusResponseJSON
 
 logger = logging.getLogger(__name__)
@@ -89,4 +90,14 @@ class AquareaDeviceStatusMixin:
                 "shiesuahruefutohkun": shiesuahruefutohkun,
             },
         )
-        return AquareaStatusResponseJSON.from_dict(json.loads(b))
+        raw = json.loads(b)
+        response = AquareaStatusResponseJSON.from_dict(raw)
+        # Panasonic answers HTTP 200 + {"errorCode": N} without statusDataInfo
+        # when the server-side session is no longer valid.  Without this check
+        # nothing gets published and HA keeps showing the last retained values.
+        if response.error_code != 0 or not response.status_data_info:
+            raise AquareaSessionError(
+                f"function/status returned errorCode={response.error_code}, "
+                f"{len(response.status_data_info)} values: {str(raw)[:300]}"
+            )
+        return response

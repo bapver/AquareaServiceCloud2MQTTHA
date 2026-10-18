@@ -96,7 +96,25 @@ async def mqtt_handler(
 
                     await client.publish(STATUS_TOPIC, "offline", qos=0, retain=True)
 
-                await asyncio.gather(read_incoming(), dispatch_outgoing())
+                # asyncio.gather() does NOT cancel the sibling when one side
+                # fails: the survivor would keep running against a dead client
+                # (orphan task). Cancel it explicitly, then re-raise.
+                tasks = [
+                    asyncio.create_task(read_incoming()),
+                    asyncio.create_task(dispatch_outgoing()),
+                ]
+                try:
+                    done, pending = await asyncio.wait(
+                        tasks, return_when=asyncio.FIRST_EXCEPTION
+                    )
+                finally:
+                    for t in tasks:
+                        if not t.done():
+                            t.cancel()
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                for t in done:
+                    if not t.cancelled() and t.exception():
+                        raise t.exception()
 
         except aiomqtt.MqttError as e:
             if ctx.is_set():
