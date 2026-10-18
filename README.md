@@ -32,7 +32,7 @@ No local gateway required — the add-on communicates directly with Panasonic's 
 
 1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**
 2. Click **⋮ → Repositories**
-3. Add: `https://github.com/baptisteverger/AquareaServiceCloud2MQTTHA`
+3. Add: `https://github.com/bapver/AquareaServiceCloud2MQTTHA`
 4. Find **AquareaServiceCloud2MQTTHA** and click **Install**
 5. Configure (see below) and click **Start**
 
