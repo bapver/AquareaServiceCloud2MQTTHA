@@ -4,7 +4,6 @@ Device status — equivalent of aquareaDeviceStatus.go
 
 import json
 import logging
-import re
 import time
 
 from aquarea_http import AquareaSessionError
@@ -41,18 +40,16 @@ class AquareaDeviceStatusMixin:
             # availability topic: publish "offline" so HA marks the entity
             # unavailable without touching the state value.
             if value == "":
-                # No usable value (unhandled type or empty payload): never
-                # publish "" as a sensor state.  Once per process, log the raw
-                # item and remove the entity discovery created by older
-                # versions so HA stops showing an empty state.
+                # No usable value (e.g. Zone2 / buffer tank / solar not
+                # installed or disabled): never publish "" as a state, mark
+                # the entity unavailable instead.  Log the raw item once.
                 if key not in self._status_unknown_types_logged:
                     self._status_unknown_types_logged.add(key)
                     logger.info(
-                        "Status item %s (%s) has no usable value (type '%s'), not published: %s",
+                        "Status item %s (%s) has no value (type '%s'), shown unavailable: %s",
                         key, name, val.type, val,
                     )
-                    clean = re.sub(r"[^a-zA-Z0-9_-]", "", name)
-                    device_status[f"homeassistant/sensor/{user.gwid}/{clean}_live/config"] = ""
+                device_status[avail_topic] = "offline"
                 continue
             if value == "-":
                 device_status[avail_topic] = "offline"

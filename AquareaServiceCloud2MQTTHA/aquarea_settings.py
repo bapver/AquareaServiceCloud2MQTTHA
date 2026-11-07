@@ -178,9 +178,9 @@ class AquareaSettingsMixin:
             try:
                 raw, parsed = await self._settings_get_attempt(user, shiesuahruefutohkun, base, ref, attempt=2)
             except AquareaApiError:
-                self.settings_diag.poll_result(first_ok=False, final_ok=False)
+                self.settings_diag(user.gwid).poll_result(first_ok=False, final_ok=False)
                 raise
-        self.settings_diag.poll_result(first_ok=first_ok, final_ok=True)
+        self.settings_diag(user.gwid).poll_result(first_ok=first_ok, final_ok=True)
         if not first_ok:
             logger.info("setting/get retry succeeded for %s", user.gwid)
         return await self._publish_settings(user, raw, parsed)
@@ -204,7 +204,7 @@ class AquareaSettingsMixin:
                 {"var.deviceId": user.device_id, "shiesuahruefutohkun": token},
             )
         except Exception as e:
-            self.settings_diag.record(**rec, ok=False, http=None, ms=0.0,
+            self.settings_diag(user.gwid).record(**rec, ok=False, http=None, ms=0.0,
                                       codes=["transport"], msg=f"{type(e).__name__}: {e}"[:300])
             raise AquareaApiError(f"setting/get transport error: {type(e).__name__}: {e}") from e
 
@@ -212,7 +212,7 @@ class AquareaSettingsMixin:
         try:
             raw = json.loads(b)
         except ValueError:
-            self.settings_diag.record(**rec, ok=False, codes=[f"http{status}-nonjson"],
+            self.settings_diag(user.gwid).record(**rec, ok=False, codes=[f"http{status}-nonjson"],
                                       body=b[:500].decode("utf-8", "replace"))
             if status in (401, 403):
                 raise AquareaSessionError(f"setting/get HTTP {status}")
@@ -234,14 +234,14 @@ class AquareaSettingsMixin:
                 for m in (raw.get("message") or [])
                 if isinstance(m, dict)
             ]
-            self.settings_diag.record(**rec, ok=False, codes=api_codes or ["none"],
+            self.settings_diag(user.gwid).record(**rec, ok=False, codes=api_codes or ["none"],
                                       error_code=parsed.error_code, body=str(raw)[:500])
             raise AquareaApiError(
                 f"function/setting/get returned errorCode={parsed.error_code}, "
                 f"api codes={api_codes or 'none'}, http={status}, {ms:.0f}ms, "
                 f"{len(parsed.setting_data_info)} values: {str(raw)[:300]}"
             )
-        self.settings_diag.record(**rec, ok=True, values=len(parsed.setting_data_info))
+        self.settings_diag(user.gwid).record(**rec, ok=True, values=len(parsed.setting_data_info))
         return raw, parsed
 
     async def _publish_settings(self, user, raw: dict, parsed) -> dict[str, str]:

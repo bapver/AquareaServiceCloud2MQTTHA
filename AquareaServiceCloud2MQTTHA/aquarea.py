@@ -86,12 +86,19 @@ class Aquarea(
         self._status_unknown_types_logged: set[str] = set()
         self._last_status_end: dict[str, float] = {}  # gwid → monotonic end of last function/status
         self._login_time: float | None = None
-        self.settings_diag = SettingsDiag()   # gwid with switch/select/number discovery sent
+        self.settings_diag_file: bool = False
+        self._settings_diags: dict[str, SettingsDiag] = {}  # gwid → per-device diag   # gwid with switch/select/number discovery sent
         self._settings_fail_streak: dict[str, int] = {}  # gwid → consecutive setting/get failures
 
     # ------------------------------------------------------------------
     # Diagnostic entities (for HA notifications)
     # ------------------------------------------------------------------
+    def settings_diag(self, gwid: str) -> SettingsDiag:
+        d = self._settings_diags.get(gwid)
+        if d is None:
+            d = self._settings_diags[gwid] = SettingsDiag(gwid, self.settings_diag_file)
+        return d
+
     def _diag_discovery(self, gwid: str) -> dict[str, str]:
         dev = {"identifiers": gwid, "manufacturer": "Panasonic",
                "model": "Aquarea", "name": f"Aquarea {gwid}"}
@@ -334,8 +341,9 @@ class Aquarea(
                         f"(log timestamp key={self.last_log_key.get(user.gwid)})"
                     )
             await self.publish_cloud_state(user.gwid, ok and not is_stale)
-            await self.data_queue.put(self.settings_diag.mqtt_payload(user.gwid))
-            self.settings_diag.maybe_log_summary()
+            diag = self.settings_diag(user.gwid)
+            await self.data_queue.put(diag.mqtt_payload())
+            diag.maybe_log_summary()
 
         if session_error:
             await self.reset_session(session_error)
@@ -373,6 +381,10 @@ async def aquarea_handler(
     aq.ssl_verify = config.get("AquareaServiceCloudSSLVerify", True)
     aq.timeout_sec = timeout_sec
     aq.stale_timeout_sec = float(config.get("StaleDataTimeout", 1800))
+    aq.settings_diag_file = bool(config.get("SettingsDiagFile", False))
+    if aq.settings_diag_file:
+        from aquarea_diag import DIAG_FILE
+        logger.info("setting/get diagnostics written to %s", DIAG_FILE)
     if not aq.ssl_verify:
         logger.warning(
             "SSL certificate verification is DISABLED "

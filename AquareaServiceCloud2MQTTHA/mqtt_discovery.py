@@ -119,6 +119,10 @@ class MqttSensor:
 
     # Per-sensor availability topic (set when sensor can be unavailable)
     availability: list = field(default_factory=list)
+    # "all": both aquarea/status AND the per-sensor topic must be "online".
+    # With HA's default "latest", the aquarea/status "online" republished at
+    # every poll overrode a per-sensor "offline" published just before.
+    availability_mode: str = ""
 
 @dataclass
 class MqttBinarySensor:
@@ -141,6 +145,7 @@ def _to_json(obj) -> str:
         d.pop("availability_topic", None)
     else:
         d.pop("availability", None)
+        d.pop("availability_mode", None)
     return json.dumps(_clean(d))
 
 
@@ -183,7 +188,8 @@ def encode_binary_sensor(name: str, device_id: str, state_topic: str) -> tuple[s
     return "", _to_json(s)
 
 
-def encode_sensor(name: str, device_id: str, state_topic: str, unit: str = "", device_class: str = "") -> tuple[str, str]:
+def encode_sensor(name: str, device_id: str, state_topic: str, unit: str = "", device_class: str = "",
+                  per_sensor_avail: bool | None = None) -> tuple[str, str]:
     safe = _slugify(name)
     # For sensors with a unit, use a per-sensor availability topic in addition
     # to the global aquarea/status. This lets us mark individual sensors
@@ -191,6 +197,7 @@ def encode_sensor(name: str, device_id: str, state_topic: str, unit: str = "", d
     # sending the non-numeric string "unavailable" on the state_topic itself,
     # which HA rejects for numeric sensors.
     avail_topic = state_topic + "/availability"
+    use_avail = bool(unit) if per_sensor_avail is None else per_sensor_avail
     s = MqttSensor(
         name=name,
         availability_topic="aquarea/status",
@@ -203,9 +210,10 @@ def encode_sensor(name: str, device_id: str, state_topic: str, unit: str = "", d
         availability=[
             {"topic": "aquarea/status"},
             {"topic": avail_topic},
-        ] if unit else [],
+        ] if use_avail else [],
+        availability_mode="all" if use_avail else "",
     )
-    return avail_topic if unit else "", _to_json(s)
+    return avail_topic if use_avail else "", _to_json(s)
 
 
 def encode_switch(name: str, device_id: str, state_topic: str, values: list[str], display_name: str = "") -> tuple[str, str]:
@@ -394,6 +402,15 @@ class AquareaDiscoveryMixin:
             elif f"{k}/unit" not in topics:
                 no_dupes[k] = v
 
+        # Status items currently without a value (published only as
+        # availability "offline"): still create the entity, it shows
+        # unavailable until the value appears.
+        for k in topics:
+            if "/state/" in k and k.endswith("/availability"):
+                base = k.removesuffix("/availability")
+                if base not in topics and base not in no_dupes:
+                    no_dupes[base] = ""
+
         for k, v in no_dupes.items():
             # Skip per-sensor availability topics — they are control topics,
             # not data topics, and should never become HA sensor entities.
@@ -412,10 +429,15 @@ class AquareaDiscoveryMixin:
             clean_name = re.sub(r'[^a-zA-Z0-9_-]', '', name)
             object_id = f"{clean_name}_{suffix.lower()}"
 
+            # Status sensors: per-sensor availability is published for every
+            # item at every poll -> always usable.  Log sensors: only when
+            # they have a unit (availability published by the log parser).
+            avail = True if is_live else None
             try:
                 if k.endswith("/unit"):
                     unit = v
-                    _, ha_data = encode_sensor(display_name, device_id, k.removesuffix("/unit"), unit)
+                    _, ha_data = encode_sensor(display_name, device_id, k.removesuffix("/unit"), unit,
+                                               per_sensor_avail=avail)
                     component = "sensor"
                 elif name == "Timestamp":
                     _, ha_data = encode_sensor(display_name, device_id, k, "", "timestamp")
@@ -425,7 +447,7 @@ class AquareaDiscoveryMixin:
                     component = "binary_sensor"
                 else:
                     unit = UNIT_MAP.get(name, "")
-                    _, ha_data = encode_sensor(display_name, device_id, k, unit)
+                    _, ha_data = encode_sensor(display_name, device_id, k, unit, per_sensor_avail=avail)
                     component = "sensor"
 
                 data_dict = json.loads(ha_data)

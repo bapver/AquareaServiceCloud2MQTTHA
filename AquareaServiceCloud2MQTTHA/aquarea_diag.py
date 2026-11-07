@@ -41,7 +41,12 @@ def pick_headers(headers) -> dict:
 
 
 class SettingsDiag:
-    def __init__(self):
+    """Per-device counters.  The JSONL file is opt-in (SettingsDiagFile):
+    ~1 line/min/device would otherwise wear SD cards for every user."""
+
+    def __init__(self, gwid: str, write_file: bool = False):
+        self.gwid = gwid
+        self.write_file = write_file
         self.attempts = 0
         self.first_fail = 0        # polls whose 1st attempt failed
         self.rescued = 0           # ... and whose retry succeeded
@@ -72,6 +77,8 @@ class SettingsDiag:
         # keep lists bounded
         self.ms_ok = self.ms_ok[-2000:]
         self.ms_fail = self.ms_fail[-2000:]
+        if not self.write_file:
+            return
         try:
             if os.path.exists(DIAG_FILE) and os.path.getsize(DIAG_FILE) > DIAG_MAX_BYTES:
                 os.replace(DIAG_FILE, DIAG_FILE + ".1")
@@ -101,16 +108,17 @@ class SettingsDiag:
             return
         w = self._win
         logger.info(
-            "setting/get last hour: %d polls, %d failed 1st attempt (%d rescued by retry), "
-            "latency ok=%s fail=%s, codes=%s — details in %s",
-            w["polls"], w["first_fail"], w["rescued"],
-            self._med(w["ms_ok"]), self._med(w["ms_fail"]), w["codes"], DIAG_FILE,
+            "setting/get last hour for %s: %d polls, %d failed 1st attempt (%d rescued by retry), "
+            "latency ok=%s fail=%s, codes=%s%s",
+            self.gwid, w["polls"], w["first_fail"], w["rescued"],
+            self._med(w["ms_ok"]), self._med(w["ms_fail"]), w["codes"],
+            f" — details in {DIAG_FILE}" if self.write_file else "",
         )
         self._win = {"polls": 0, "first_fail": 0, "rescued": 0, "ms_ok": [], "ms_fail": [], "codes": {}}
         self._last_summary = time.monotonic()
 
-    def mqtt_payload(self, gwid: str) -> dict[str, str]:
-        base = f"aquarea/{gwid}/diag"
+    def mqtt_payload(self) -> dict[str, str]:
+        base = f"aquarea/{self.gwid}/diag"
         return {
             f"{base}/settings_fail_first": str(self.first_fail),
             f"{base}/settings_rescued": str(self.rescued),

@@ -110,13 +110,13 @@ class AquareaDeviceStatisticsMixin:
                 str_val = _format_val(val)
 
             state_topic = f"aquarea/{user.gwid}/log/{name}"
-            if unit:
-                # Sensors with a unit are discovered with a per-sensor
-                # availability topic (mqtt_discovery.encode_sensor).
-                if _is_temp_sentinel(str_val, unit):
-                    stats[state_topic + "/availability"] = "offline"
-                    continue
-                stats[state_topic + "/availability"] = "online"
+            # Sensors with a unit are discovered with a per-sensor availability
+            # topic (availability_mode "all").  Published for every item so a
+            # unit coming from translation.json (UNIT_MAP) is covered too.
+            if _is_temp_sentinel(str_val, unit):
+                stats[state_topic + "/availability"] = "offline"
+                continue
+            stats[state_topic + "/availability"] = "online"
             stats[state_topic] = str_val
 
         # Freshness marker consumed by the stale-data watchdog (aquarea.py)
