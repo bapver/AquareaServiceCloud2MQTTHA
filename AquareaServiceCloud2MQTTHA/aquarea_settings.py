@@ -191,11 +191,16 @@ class AquareaSettingsMixin:
         now = time.monotonic()
         login_t = getattr(self, "_login_time", None)
         status_t = self._last_status_end.get(user.gwid)
+        prev_t = self._last_settings_call.get(user.gwid)
+        self._last_settings_call[user.gwid] = now
         rec = {
             "gwid": user.gwid,
             "attempt": attempt,
             "since_login_s": round(now - login_t, 1) if login_t is not None else None,
             "since_status_s": round(now - status_t, 2) if status_t is not None else None,
+            # Tests the "called too often" hypothesis (startup runs two
+            # cycles back to back, the retry comes 3 s after attempt 1).
+            "since_prev_settings_s": round(now - prev_t, 1) if prev_t is not None else None,
         }
         try:
             status, headers, b, ms = await self.http_post_with_referer_full(

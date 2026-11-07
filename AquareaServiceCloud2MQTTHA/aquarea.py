@@ -84,7 +84,8 @@ class Aquarea(
         self._diag_discovered: set[str] = set()
         self._settings_discovered: set[str] = set()
         self._status_unknown_types_logged: set[str] = set()
-        self._last_status_end: dict[str, float] = {}  # gwid → monotonic end of last function/status
+        self._last_status_end: dict[str, float] = {}
+        self._last_settings_call: dict[str, float] = {}  # gwid → monotonic start of last setting/get  # gwid → monotonic end of last function/status
         self._login_time: float | None = None
         self.settings_diag_file: bool = False
         self._settings_diags: dict[str, SettingsDiag] = {}  # gwid → per-device diag   # gwid with switch/select/number discovery sent
