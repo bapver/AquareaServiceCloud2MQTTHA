@@ -44,8 +44,9 @@ class SettingsDiag:
     """Per-device counters.  The JSONL file is opt-in (SettingsDiagFile):
     ~1 line/min/device would otherwise wear SD cards for every user."""
 
-    def __init__(self, gwid: str, write_file: bool = False):
+    def __init__(self, gwid: str, write_file: bool = False, delay_sec: float = 0.0):
         self.gwid = gwid
+        self.delay_sec = delay_sec
         self.write_file = write_file
         self.attempts = 0
         self.first_fail = 0        # polls whose 1st attempt failed
@@ -108,9 +109,9 @@ class SettingsDiag:
             return
         w = self._win
         logger.info(
-            "setting/get last hour for %s: %d polls, %d failed 1st attempt (%d rescued by retry), "
-            "latency ok=%s fail=%s, codes=%s%s",
-            self.gwid, w["polls"], w["first_fail"], w["rescued"],
+            "setting/get last hour for %s (SettingsDelay=%.0fs): %d polls, %d failed 1st attempt "
+            "(%d rescued by retry), latency ok=%s fail=%s, codes=%s%s",
+            self.gwid, self.delay_sec, w["polls"], w["first_fail"], w["rescued"],
             self._med(w["ms_ok"]), self._med(w["ms_fail"]), w["codes"],
             f" — details in {DIAG_FILE}" if self.write_file else "",
         )

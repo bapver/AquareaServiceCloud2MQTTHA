@@ -88,6 +88,7 @@ class Aquarea(
         self._last_settings_call: dict[str, float] = {}  # gwid → monotonic start of last setting/get  # gwid → monotonic end of last function/status
         self._login_time: float | None = None
         self.settings_diag_file: bool = False
+        self.settings_delay_sec: float = 0.0  # pause between function/status and setting/get
         self._settings_diags: dict[str, SettingsDiag] = {}  # gwid → per-device diag   # gwid with switch/select/number discovery sent
         self._settings_fail_streak: dict[str, int] = {}  # gwid → consecutive setting/get failures
 
@@ -97,7 +98,7 @@ class Aquarea(
     def settings_diag(self, gwid: str) -> SettingsDiag:
         d = self._settings_diags.get(gwid)
         if d is None:
-            d = self._settings_diags[gwid] = SettingsDiag(gwid, self.settings_diag_file)
+            d = self._settings_diags[gwid] = SettingsDiag(gwid, self.settings_diag_file, self.settings_delay_sec)
         return d
 
     def _diag_discovery(self, gwid: str) -> dict[str, str]:
@@ -294,6 +295,11 @@ class Aquarea(
                 ok = False
                 logger.error("parse_device_status failed for device %s: %s", user.gwid, e)
 
+            if self.settings_delay_sec > 0:
+                # Optional pause so setting/get is not fired ~0.1 s after
+                # function/status (tests whether back-to-back calls cause the
+                # intermittent 9999-9999 / 1000-5400 errors).
+                await asyncio.sleep(self.settings_delay_sec)
             try:
                 settings = await self.get_device_settings(user, shiesuahruefutohkun)
                 if user.gwid not in self._settings_discovered:
@@ -383,6 +389,9 @@ async def aquarea_handler(
     aq.timeout_sec = timeout_sec
     aq.stale_timeout_sec = float(config.get("StaleDataTimeout", 1800))
     aq.settings_diag_file = bool(config.get("SettingsDiagFile", False))
+    aq.settings_delay_sec = max(0.0, float(config.get("SettingsDelay", 0) or 0))
+    if aq.settings_delay_sec:
+        logger.info("Pause of %.0fs between status and settings requests", aq.settings_delay_sec)
     if aq.settings_diag_file:
         from aquarea_diag import DIAG_FILE
         logger.info("setting/get diagnostics written to %s", DIAG_FILE)

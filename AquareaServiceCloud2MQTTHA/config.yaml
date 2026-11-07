@@ -1,5 +1,5 @@
 name: "AquareaServiceCloud2MQTTHA"
-version: "1.0.7"
+version: "1.0.8"
 slug: "aquareaservicecloud2mqqtha"
 description: "Panasonic Aquarea Service Cloud to MQTT gateway (Python port)"
 url: "https://github.com/bapver/AquareaServiceCloud2MQTTHA"
@@ -21,6 +21,7 @@ options:
   LogSecOffset: 3600
   StaleDataTimeout: 1800
   SettingsDiagFile: false
+  SettingsDelay: 0
   MqttServer: ""
   MqttPort: 1883
   MqttLogin: ""
@@ -38,6 +39,7 @@ schema:
   LogSecOffset: int
   StaleDataTimeout: int?
   SettingsDiagFile: bool?
+  SettingsDelay: int(0,30)?
   MqttServer: str
   MqttPort: int
   MqttLogin: str
