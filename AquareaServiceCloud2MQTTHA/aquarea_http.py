@@ -3,6 +3,7 @@ HTTP helpers — equivalent of aquareaHTTP.go
 """
 
 import logging
+import time
 import aiohttp
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,13 @@ class AquareaSessionError(RuntimeError):
     """Panasonic answered HTTP 200 but the payload says the session is no
     longer usable (errorCode != 0 or empty data).  Requires a full re-login
     with a fresh cookie jar."""
+
+class AquareaApiError(RuntimeError):
+    """Panasonic answered but reported a backend-side failure for this call
+    only (e.g. function/setting/get -> message[].errorCode 9999-9999 or
+    1000-5400) while the session itself is still valid: the very next poll
+    on the same session usually succeeds.  Must NOT trigger a re-login."""
+
 
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -130,6 +138,25 @@ class AquareaHTTPMixin:
         async with self.session.post(url, data=form, headers=headers) as resp:
             resp.raise_for_status()
             return await resp.read()
+
+    async def http_post_with_referer_full(
+        self, url: str, referer: str, data: dict | None
+    ) -> tuple[int, dict, bytes, float]:
+        """Same as http_post_with_referer but returns (status, headers, body,
+        elapsed_ms) and does not raise on HTTP errors — used for diagnostics."""
+        form = _make_multipart(data or {})
+        headers = {
+            **self._base_headers,
+            "Referer": referer,
+            "Origin": "https://aquarea-service.panasonic.com",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        }
+        t0 = time.monotonic()
+        async with self.session.post(url, data=form, headers=headers) as resp:
+            body = await resp.read()
+            return resp.status, dict(resp.headers), body, (time.monotonic() - t0) * 1000
 
     async def http_post_navigate(self, url: str, referer: str, data: dict | None) -> bytes:
         """Simulate a browser form-submit navigation (application/x-www-form-urlencoded)."""

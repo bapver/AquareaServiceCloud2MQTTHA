@@ -4,6 +4,8 @@ Device status — equivalent of aquareaDeviceStatus.go
 
 import json
 import logging
+import re
+import time
 
 from aquarea_http import AquareaSessionError
 from aquarea_types import AquareaEndUserJSON, AquareaStatusResponseJSON
@@ -38,6 +40,20 @@ class AquareaDeviceStatusMixin:
             # numeric sensors (unit °C etc.). Instead we use a per-sensor
             # availability topic: publish "offline" so HA marks the entity
             # unavailable without touching the state value.
+            if value == "":
+                # No usable value (unhandled type or empty payload): never
+                # publish "" as a sensor state.  Once per process, log the raw
+                # item and remove the entity discovery created by older
+                # versions so HA stops showing an empty state.
+                if key not in self._status_unknown_types_logged:
+                    self._status_unknown_types_logged.add(key)
+                    logger.info(
+                        "Status item %s (%s) has no usable value (type '%s'), not published: %s",
+                        key, name, val.type, val,
+                    )
+                    clean = re.sub(r"[^a-zA-Z0-9_-]", "", name)
+                    device_status[f"homeassistant/sensor/{user.gwid}/{clean}_live/config"] = ""
+                continue
             if value == "-":
                 device_status[avail_topic] = "offline"
                 # Also ensure the state_topic gets "online" back when it recovers
@@ -90,6 +106,7 @@ class AquareaDeviceStatusMixin:
                 "shiesuahruefutohkun": shiesuahruefutohkun,
             },
         )
+        self._last_status_end[user.gwid] = time.monotonic()
         raw = json.loads(b)
         response = AquareaStatusResponseJSON.from_dict(raw)
         # Panasonic answers HTTP 200 + {"errorCode": N} without statusDataInfo

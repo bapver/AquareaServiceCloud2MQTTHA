@@ -3,6 +3,7 @@ Login & initialisation — equivalent of aquareaLogin.go
 """
 
 import hashlib
+import time
 import json
 import logging
 import re
@@ -126,8 +127,10 @@ class AquareaLoginMixin:
                 ha_config = self.encode_switches(settings, user)
                 if ha_config:
                     await self.data_queue.put(ha_config)
+                self._settings_discovered.add(user.gwid)
             except Exception as e:
-                logger.error("Initial settings fetch failed for device %s: %s", user.gwid, e)
+                # Discovery is retried by the poll loop on the next successful fetch
+                logger.warning("Initial settings fetch failed for device %s (retried next poll): %s", user.gwid, e)
 
             # 4. Logs
             try:
@@ -168,6 +171,7 @@ class AquareaLoginMixin:
         if not token:
             raise ValueError(f"No shiesuahruefutohkun in installerState: {data}")
         self._shiesuahruefutohkun = token
+        self._login_time = time.monotonic()
         logger.info("Login OK, token: %s", token)
 
     async def aquarea_installer_home(self):

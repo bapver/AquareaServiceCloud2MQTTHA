@@ -21,11 +21,12 @@ from aquarea_types import (
     AquareaFunctionSettingGetJSON,
     AquareaLogItem,
 )
-from aquarea_http import AquareaHTTPMixin, AquareaSessionError
+from aquarea_http import AquareaApiError, AquareaHTTPMixin, AquareaSessionError
 from aquarea_login import AquareaLoginMixin
 from aquarea_settings import AquareaSettingsMixin
 from aquarea_device_status import AquareaDeviceStatusMixin
 from aquarea_device_statistics import AquareaDeviceStatisticsMixin
+from aquarea_diag import SettingsDiag
 from mqtt_discovery import AquareaDiscoveryMixin
 
 TRANSLATION_FILE = "translation.json"
@@ -33,6 +34,10 @@ TRANSLATION_FILE = "translation.json"
 # Minimum delay between two session rebuilds, to avoid hammering the login
 # endpoint when Panasonic itself is down / in maintenance.
 MIN_RESET_INTERVAL_SEC = 300
+# function/setting/get fails intermittently on Panasonic side (~25 % of polls
+# observed) while the session stays valid.  Only rebuild the session if it
+# keeps failing this many polls in a row.
+SETTINGS_FAILS_BEFORE_RESET = 10
 logger = logging.getLogger(__name__)
 
 
@@ -77,6 +82,12 @@ class Aquarea(
         self._last_reset: float = 0.0
         self.session_resets: int = 0
         self._diag_discovered: set[str] = set()
+        self._settings_discovered: set[str] = set()
+        self._status_unknown_types_logged: set[str] = set()
+        self._last_status_end: dict[str, float] = {}  # gwid → monotonic end of last function/status
+        self._login_time: float | None = None
+        self.settings_diag = SettingsDiag()   # gwid with switch/select/number discovery sent
+        self._settings_fail_streak: dict[str, int] = {}  # gwid → consecutive setting/get failures
 
     # ------------------------------------------------------------------
     # Diagnostic entities (for HA notifications)
@@ -114,6 +125,21 @@ class Aquarea(
         add("sensor", "last_reset_reason", {
             "name": "Last session reset reason",
             "state_topic": f"{base}/last_reset_reason", "icon": "mdi:alert-circle-outline",
+        })
+        for oid, name, icon in (
+            ("settings_fail_first", "Settings fails (1st attempt)", "mdi:alert"),
+            ("settings_rescued", "Settings fails rescued by retry", "mdi:refresh"),
+            ("settings_fail_final", "Settings fails (after retry)", "mdi:alert-octagon"),
+        ):
+            add("sensor", oid, {"name": name, "state_topic": f"{base}/{oid}",
+                                "icon": icon, "state_class": "total_increasing"})
+        add("sensor", "settings_last_ms", {
+            "name": "Settings last latency", "state_topic": f"{base}/settings_last_ms",
+            "unit_of_measurement": "ms", "state_class": "measurement", "icon": "mdi:timer-outline",
+        })
+        add("sensor", "settings_last_error", {
+            "name": "Settings last error", "state_topic": f"{base}/settings_last_error",
+            "icon": "mdi:alert-circle-outline",
         })
         return out
 
@@ -178,6 +204,7 @@ class Aquarea(
         # earliest after another full stale_timeout_sec.
         self._fresh_sig.clear()
         self._fresh_since.clear()
+        self._settings_fail_streak.clear()
         if ok:
             logger.info("Panasonic session rebuilt successfully")
         else:
@@ -261,7 +288,26 @@ class Aquarea(
 
             try:
                 settings = await self.get_device_settings(user, shiesuahruefutohkun)
+                if user.gwid not in self._settings_discovered:
+                    # Initial fetch failed at startup / after a reset: send
+                    # discovery now, otherwise the entities never appear.
+                    ha_config = self.encode_switches(settings, user)
+                    if ha_config:
+                        await self.data_queue.put(ha_config)
+                    self._settings_discovered.add(user.gwid)
                 await self.data_queue.put(settings)
+                self._settings_fail_streak[user.gwid] = 0
+            except AquareaApiError as e:
+                streak = self._settings_fail_streak.get(user.gwid, 0) + 1
+                self._settings_fail_streak[user.gwid] = streak
+                logger.warning(
+                    "Settings fetch failed for %s (%d in a row, last values kept): %s",
+                    user.gwid, streak, e,
+                )
+                if streak >= SETTINGS_FAILS_BEFORE_RESET:
+                    session_error = session_error or (
+                        f"settings {user.gwid}: {streak} consecutive failures, last: {e}"
+                    )
             except AquareaSessionError as e:
                 session_error = session_error or f"settings {user.gwid}: {e}"
                 ok = False
@@ -288,6 +334,8 @@ class Aquarea(
                         f"(log timestamp key={self.last_log_key.get(user.gwid)})"
                     )
             await self.publish_cloud_state(user.gwid, ok and not is_stale)
+            await self.data_queue.put(self.settings_diag.mqtt_payload(user.gwid))
+            self.settings_diag.maybe_log_summary()
 
         if session_error:
             await self.reset_session(session_error)

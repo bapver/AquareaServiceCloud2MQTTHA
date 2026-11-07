@@ -2,17 +2,21 @@
 Device settings — equivalent of aquareaDeviceSettings.go
 """
 
+import asyncio
 import json
 import logging
 import re
+import time
 
-from aquarea_http import AquareaSessionError
+from aquarea_diag import pick_headers
+from aquarea_http import AquareaApiError, AquareaSessionError
 from aquarea_types import AquareaCommand, AquareaEndUserJSON, AquareaFunctionSettingGetJSON
 from aquarea_placeholder_ranges import compute_placeholder_ranges, load_from_js
 
 logger = logging.getLogger(__name__)
 
 _JS_OPTIONS_LOADED = False  # load once per process lifetime
+SETTINGS_RETRY_DELAY_SEC = 3.0  # one immediate retry on the same session
 
 
 class AquareaSettingsMixin:
@@ -163,22 +167,84 @@ class AquareaSettingsMixin:
         # Referer: installer/functionSetting.  We must replicate that referer here.
         ref = base + "installer/functionSetting"
 
-        b = await self.http_post_with_referer(
-            base + "installer/api/function/setting/get",
-            ref,
-            {"var.deviceId": user.device_id, "shiesuahruefutohkun": shiesuahruefutohkun},
-        )
+        first_ok = True
+        try:
+            raw, parsed = await self._settings_get_attempt(user, shiesuahruefutohkun, base, ref, attempt=1)
+        except AquareaApiError as e:
+            first_ok = False
+            logger.info("setting/get attempt 1 failed for %s, retrying in %.0fs: %s",
+                        user.gwid, SETTINGS_RETRY_DELAY_SEC, e)
+            await asyncio.sleep(SETTINGS_RETRY_DELAY_SEC)
+            try:
+                raw, parsed = await self._settings_get_attempt(user, shiesuahruefutohkun, base, ref, attempt=2)
+            except AquareaApiError:
+                self.settings_diag.poll_result(first_ok=False, final_ok=False)
+                raise
+        self.settings_diag.poll_result(first_ok=first_ok, final_ok=True)
+        if not first_ok:
+            logger.info("setting/get retry succeeded for %s", user.gwid)
+        return await self._publish_settings(user, raw, parsed)
 
-        raw = json.loads(b)
+    async def _settings_get_attempt(self, user, token: str, base: str, ref: str, attempt: int):
+        """One instrumented setting/get call. Returns (raw, parsed) or raises
+        AquareaApiError / AquareaSessionError. Every attempt is recorded."""
+        now = time.monotonic()
+        login_t = getattr(self, "_login_time", None)
+        status_t = self._last_status_end.get(user.gwid)
+        rec = {
+            "gwid": user.gwid,
+            "attempt": attempt,
+            "since_login_s": round(now - login_t, 1) if login_t is not None else None,
+            "since_status_s": round(now - status_t, 2) if status_t is not None else None,
+        }
+        try:
+            status, headers, b, ms = await self.http_post_with_referer_full(
+                base + "installer/api/function/setting/get",
+                ref,
+                {"var.deviceId": user.device_id, "shiesuahruefutohkun": token},
+            )
+        except Exception as e:
+            self.settings_diag.record(**rec, ok=False, http=None, ms=0.0,
+                                      codes=["transport"], msg=f"{type(e).__name__}: {e}"[:300])
+            raise AquareaApiError(f"setting/get transport error: {type(e).__name__}: {e}") from e
+
+        rec.update(http=status, ms=round(ms, 1), bytes=len(b), headers=pick_headers(headers))
+        try:
+            raw = json.loads(b)
+        except ValueError:
+            self.settings_diag.record(**rec, ok=False, codes=[f"http{status}-nonjson"],
+                                      body=b[:500].decode("utf-8", "replace"))
+            if status in (401, 403):
+                raise AquareaSessionError(f"setting/get HTTP {status}")
+            raise AquareaApiError(f"setting/get HTTP {status}, non-JSON body ({len(b)} bytes)")
+
         parsed = AquareaFunctionSettingGetJSON.from_dict(raw)
         # Validate BEFORE overwriting self.aquarea_settings: an empty response
         # would otherwise wipe settings_background_data and make send_setting()
         # silently drop every command.
         if parsed.error_code != 0 or not parsed.setting_data_info:
-            raise AquareaSessionError(
+            # Panasonic reports intermittent backend failures of this endpoint as
+            # errorCode=0 + message=[{errorCode: '9999-9999' | '1000-5400'}].
+            # function/status succeeds on the same session in the same poll and
+            # setting/get succeeds again one poll later without any re-login:
+            # it is not a session problem.  Session loss is detected by
+            # function/status (called first), so never reset from here.
+            api_codes = [
+                m.get("errorCode", "?")
+                for m in (raw.get("message") or [])
+                if isinstance(m, dict)
+            ]
+            self.settings_diag.record(**rec, ok=False, codes=api_codes or ["none"],
+                                      error_code=parsed.error_code, body=str(raw)[:500])
+            raise AquareaApiError(
                 f"function/setting/get returned errorCode={parsed.error_code}, "
+                f"api codes={api_codes or 'none'}, http={status}, {ms:.0f}ms, "
                 f"{len(parsed.setting_data_info)} values: {str(raw)[:300]}"
             )
+        self.settings_diag.record(**rec, ok=True, values=len(parsed.setting_data_info))
+        return raw, parsed
+
+    async def _publish_settings(self, user, raw: dict, parsed) -> dict[str, str]:
         self.aquarea_settings = parsed
         settings: dict[str, str] = {}
 

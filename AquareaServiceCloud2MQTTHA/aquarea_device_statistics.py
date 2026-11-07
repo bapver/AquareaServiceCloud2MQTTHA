@@ -4,6 +4,7 @@ Device statistics / log — equivalent of aquareaDeviceStatistics.go
 
 import json
 import logging
+import math
 import time
 from datetime import datetime, timezone
 
@@ -12,13 +13,43 @@ from aquarea_types import AquareaEndUserJSON, AquareaLogDataJSON
 logger = logging.getLogger(__name__)
 
 
-def _format_val(val: int | float) -> str:
-    """Format a numeric value avoiding float precision artifacts."""
-    if isinstance(val, float) and val == int(val):
-        return str(int(val))
-    elif isinstance(val, float):
+# Panasonic log value meaning "no sensor / not applicable" for temperatures
+# (pool, solar, buffer tank, zone water temps on installations without them).
+_TEMP_SENTINEL = -78
+_TEMP_UNITS = ("°C", "℃", "C")
+
+
+def _format_val(val) -> str:
+    """Format a numeric value avoiding float precision artifacts.
+
+    logData values arrive as JSON strings ("11.600000000000001") as well as
+    numbers, so strings are parsed too — otherwise they were published raw.
+    """
+    if isinstance(val, str):
+        s = val.strip()
+        try:
+            f = float(s)
+        except ValueError:
+            return val
+        if "." not in s and "e" not in s.lower():
+            return s  # integer-like string: keep as is
+        val = f
+    if isinstance(val, float):
+        if not math.isfinite(val):
+            return str(val)
+        if val == int(val):
+            return str(int(val))
         return f"{val:.2f}".rstrip('0').rstrip('.')
     return str(val)
+
+
+def _is_temp_sentinel(str_val: str, unit: str) -> bool:
+    if not unit or not unit.endswith(_TEMP_UNITS):
+        return False
+    try:
+        return float(str_val) == _TEMP_SENTINEL
+    except ValueError:
+        return False
 
 
 class AquareaDeviceStatisticsMixin:
@@ -64,11 +95,13 @@ class AquareaDeviceStatisticsMixin:
         stats: dict[str, str] = {}
 
         for i, val in enumerate(device_log[last_key]):
+            unit = ""
             if i < len(device_log_items):
                 item = device_log_items[i]
                 name = item.name
-                if item.unit:
-                    stats[f"aquarea/{user.gwid}/log/{name}/unit"] = item.unit
+                unit = item.unit
+                if unit:
+                    stats[f"aquarea/{user.gwid}/log/{name}/unit"] = unit
                 # Format float BEFORE looking up in values dict
                 # (values.get converts to str, losing float type)
                 str_val = item.values.get(str(val), _format_val(val))
@@ -76,7 +109,15 @@ class AquareaDeviceStatisticsMixin:
                 name = f"item{i:03d}"
                 str_val = _format_val(val)
 
-            stats[f"aquarea/{user.gwid}/log/{name}"] = str_val
+            state_topic = f"aquarea/{user.gwid}/log/{name}"
+            if unit:
+                # Sensors with a unit are discovered with a per-sensor
+                # availability topic (mqtt_discovery.encode_sensor).
+                if _is_temp_sentinel(str_val, unit):
+                    stats[state_topic + "/availability"] = "offline"
+                    continue
+                stats[state_topic + "/availability"] = "online"
+            stats[state_topic] = str_val
 
         # Freshness marker consumed by the stale-data watchdog (aquarea.py)
         self.last_log_key[user.gwid] = last_key
